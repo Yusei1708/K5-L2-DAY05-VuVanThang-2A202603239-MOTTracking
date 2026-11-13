@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab 05 · Soi khác biệt giữa hai bản gán nhãn</title>
+<style>
+  :root {
+    color-scheme: light;
+    font: 16px/1.62 "Inter", system-ui, sans-serif;
+    color: #17283a;
+    background: #f5f7f9;
+    --ink: #17283a;
+    --muted: #46586b;
+    --accent: #075f59;
+    --rule: #cdd8e0;
+    --paper: #fff;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  main { width: min(100% - 2rem, 52rem); margin: 0 auto; padding: clamp(2rem, 7vw, 5rem) 0; }
+  header { padding-bottom: 1.5rem; border-bottom: 1px solid var(--rule); }
+  h1, h2 { margin: 0 0 .75rem; letter-spacing: -.025em; line-height: 1.13; }
+  h1 { font-size: clamp(2.1rem, 7vw, 4rem); max-width: 16ch; }
+  h2 { font-size: clamp(1.45rem, 4vw, 2rem); }
+  h3 { font-size: 1.04rem; }
+  p { margin: .75rem 0; }
+  .overline { color: var(--accent); font-size: .84rem; font-weight: 750; margin-bottom: .8rem; }
+  .lead { color: var(--muted); max-width: 60ch; }
+  section { margin: 2rem 0; }
+  a { color: var(--accent); text-underline-offset: .2em; }
+  a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  li { margin-bottom: .65rem; }
+  code, pre { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+  code { font-size: .92em; overflow-wrap: anywhere; }
+  pre { padding: 1rem; color: #eef6fa; background: #182a3b; border-radius: .6rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .note, details { background: var(--paper); border: 1px solid var(--rule); border-radius: .6rem; padding: .85rem 1.05rem; }
+  .note { border-left: 4px solid var(--accent); }
+  details { margin: .65rem 0; }
+  summary { cursor: pointer; font-weight: 680; }
+  footer { border-top: 1px solid var(--rule); padding-top: 1rem; color: var(--muted); font-size: .93rem; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="overline">AI20K · Lab 05 · Sandbox tùy chọn</p>
+    <h1>Soi khác biệt giữa hai bản gán nhãn</h1>
+    <p class="lead">Dùng hai bản export độc lập của cùng một clip để tìm một frame cần xem lại, rồi kiểm tra trực tiếp trên video và đối chiếu quy tắc của Lab 05.</p>
+    <p class="note"><strong>Thứ tự thực hành.</strong> Hoàn thành bài chính CP0–CP4 và tự soát trước khi xem bản của bạn học hoặc chạy so sánh. Sandbox dùng để luyện phản hồi và sửa bài. Điểm và yêu cầu nộp chính thức giữ theo Lab 05.</p>
+  </header>
+
+  <section aria-labelledby="start">
+    <h2 id="start">Làm quen với ba frame giả lập</h2>
+    <p>Mở terminal tại thư mục chứa <a href="compare-exports.py">compare-exports.py</a>. Cần Python 3.10 trở lên. Script đọc file trên máy và in kết quả ra terminal.</p>
+    <pre><code>python3 compare-exports.py --demo</code></pre>
+    <p>IoU là phần diện tích giao chia cho diện tích hợp của hai box. IoU bằng 1 khi hai box trùng nhau. Hãy đọc kết quả rồi mở từng mục để đối chiếu cách hiểu.</p>
+    <details>
+      <summary>Frame 0 · Hai cặp box</summary>
+      <p>A4 và B70 trùng hình học dù ID khác nhau. A8 và B90 có IoU 0,538 nên xuất hiện gợi ý <code>review box fit</code>. Cần xem video và quy tắc để nhận xét box nào hợp lý hơn.</p>
+    </details>
+    <details>
+      <summary>Frame 1 · Một box chỉ có trong B</summary>
+      <p>A8 chuyển sang <code>outside</code>, còn B90 vẫn có box. Dòng <code>unmatched B 90</code> dẫn đến chỗ cần xem video để quyết định đối tượng đã khuất hẳn hay còn thấy một phần. Box A4 ở frame này được nội suy từ hai mốc.</p>
+    </details>
+    <details>
+      <summary>Frame 2 · Cặp tương ứng thay đổi</summary>
+      <p>A4 ghép với B71 sau khi ghép với B70 ở frame liền trước. Xem hai frame và các frame lân cận để phân biệt đứt track, ghép nhầm do box chồng nhau, hoặc một đối tượng khác. Đây là gợi ý kiểm tra tính liên tục của track.</p>
+    </details>
+  </section>
+
+  <section aria-labelledby="peer">
+    <h2 id="peer">Đối chiếu bản làm độc lập</h2>
+    <ol>
+      <li>Chọn hai bản export của cùng đoạn clip, cùng thứ tự và phạm vi frame. Dùng <strong>CVAT for video 1.1</strong> để đối chiếu cả cờ <code>occluded</code>. Có thể dùng <strong>MOT 1.1</strong> để đối chiếu box. Chọn export chỉ chứa annotation.</li>
+      <li>Chọn mốc cần xem theo nhật ký tự soát, chẳng hạn ngay trước, trong và sau đoạn một người bị che. Thay tên file và các mốc dưới đây bằng dữ liệu của nhóm.</li>
+    </ol>
+    <pre><code>python3 compare-exports.py A.zip B.zip --frames 24-32,48-53,149</code></pre>
+    <ol start="3">
+      <li>Mở đúng frame trong CVAT, xác định người bằng vị trí box và diễn biến qua các frame. Số frame CVAT bắt đầu từ 0, còn MOT bắt đầu từ 1. ID in ra thuộc bản export, nên dùng cả tọa độ hoặc hình ảnh để tìm đúng đối tượng.</li>
+      <li>Ghi một dòng bằng chứng gồm <strong>phiên bản export và frame · điều thấy trên clip · quy tắc liên quan · sửa gì hoặc hỏi coach điều gì</strong>. Nếu sửa, xem lại frame lân cận và lưu kết quả trước/sau theo quy định của Lab.</li>
+    </ol>
+    <p class="note">Hai người có thể đồng ý và vẫn cùng áp dụng sai quy tắc. Các mốc IoU 0,50 để ghép cặp và 0,80 để gợi ý soi box chỉ dùng cho thử nghiệm. Với clip thật, ưu tiên kiểm tra điểm khác biệt bằng video.</p>
+  </section>
+
+  <section aria-labelledby="builder">
+    <h2 id="builder">Thử cải tiến công cụ</h2>
+    <p>Sau phần chính, chọn một trường hợp dưới đây. Dùng bản sao script và dữ liệu giả lập. Viết dự đoán trước khi chạy, lưu lệnh và kết quả, rồi đề xuất một cải tiến nhỏ kèm cách thử lại.</p>
+    <ul>
+      <li><strong>Đổi số ID.</strong> Trong <code>DEMO_B</code>, đổi mọi ID 70 thành 700 và giữ ID 71. Dòng đổi cặp ở frame 2 vẫn xuất hiện. Sau đó đổi ID 71 thành 700. Lần này dòng đổi cặp biến mất, còn IoU và số box mỗi frame giữ nguyên. Giải thích vì sao hai thay đổi cho kết quả khác nhau.</li>
+      <li><strong>Hai người giao nhau.</strong> Dựng một frame có hai cặp box chồng lên nhau đến mức một box có nhiều ứng viên với IoU đủ lớn. Dự đoán cặp được chọn và kiểm tra cảnh báo <code>multiple overlap candidates</code>. Mở rộng thử nghiệm bằng hai frame liền nhau và kiểm tra tín hiệu khi một frame ghép mơ hồ.</li>
+      <li><strong>Ra khỏi khung và quay lại.</strong> Thêm một box <code>outside="0"</code> cho A8 tại frame 2 trong <code>DEMO_A</code>. Frame 1 vẫn bỏ box A8, frame 2 có box A8 trở lại. Kiểm tra điều này qua hai dòng số lượng và một dòng <code>unmatched</code>.</li>
+      <li><strong>Kiểm tra cách ghép.</strong> Tạo bốn box cùng cao 40 và rộng 20. Đặt mép trái A lần lượt ở 10 và 17, mép trái B ở 11 và 4. Tại IoU tối thiểu 0,50, ghép cặp IoU cao nhất trước chỉ cho một cặp. Script hiện tại chọn hai cặp đủ ngưỡng. Giải thích lựa chọn này và tình huống dễ gây ghép sai người.</li>
+    </ul>
+    <details>
+      <summary>Phạm vi script và cách đọc kết quả</summary>
+      <p>Nhận file XML video, ZIP chứa <code>annotations.xml</code>, ZIP MOT chứa <code>gt.txt</code>, hoặc MOT TXT theo schema export annotation CVAT. Chạy trên clip bắt đầu từ frame 0, không lọc bước frame. MOT TXT cần <code>labels.txt</code> cùng thư mục để đối chiếu nhãn. Dùng cùng bộ nhãn cho cả hai bản.</p>
+      <p>Script chỉ xử lý box chữ nhật thẳng trục và tối đa 12 box mỗi bên trên một frame. Script nội suy giữa các mốc XML và bỏ các frame <code>outside</code>. Nếu yêu cầu frame sau mốc XML cuối còn thấy, script yêu cầu export đầy đủ hoặc giới hạn phạm vi. MOT chỉ có các dòng box được xuất và thiếu cờ <code>occluded</code> của XML.</p>
+      <p>Việc ghép cặp tối đa hóa số cặp đủ IoU trước, sau đó tối đa hóa tổng IoU. Script gợi ý đổi cặp khi hai frame đã chọn liền nhau có cặp đủ ngưỡng soi box, không mơ hồ và không khác nhãn đã biết. Việc kiểm tra xuyên qua đoạn khuất vẫn cần người xem clip.</p>
+    </details>
+  </section>
+
+  <footer>
+    <p><strong>Tham chiếu.</strong> CVAT mô tả Automated QA cho Online và Enterprise, với Ground Truth và màn hình xem xung đột. Gói Online trả phí có Immediate Job Feedback và báo cáo chất lượng. Sandbox này là thử nghiệm cục bộ dùng hai bản gán nhãn ngang hàng, dữ liệu giả lập hoặc export được phép dùng trong lớp. <a href="https://docs.cvat.ai/docs/qa-analytics/auto-qa/">CVAT Automated QA</a> · <a href="https://www.cvat.ai/pricing/cvat-online">CVAT Online Pricing</a></p>
+    <p>Định dạng đầu vào. <a href="https://docs.cvat.ai/docs/dataset_management/formats/format-cvat/">CVAT XML</a> · <a href="https://docs.cvat.ai/docs/dataset_management/formats/format-mot/">CVAT MOT</a></p>
+  </footer>
+</main>
+</body>
+</html>

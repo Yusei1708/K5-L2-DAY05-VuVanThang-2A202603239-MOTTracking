@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="vi">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bộ công cụ tự soát tracking · AI20K K5</title>
+<style>
+:root{font:17px/1.65 system-ui,sans-serif;color:#132340;background:#f1f5fc}
+body{margin:0;border-top:7px solid #1749af}
+main{max-width:900px;margin:auto;padding:clamp(18px,5vw,54px)}
+header{margin-bottom:30px}
+h1{font-size:clamp(34px,7vw,60px);line-height:1.1;margin:12px 0;letter-spacing:-.04em}
+h2{line-height:1.2;margin:0 0 10px}
+.kicker{font-size:14px;letter-spacing:.1em;color:#1749af;font-weight:750}
+section{background:#fff;border:1px solid #d5e1f4;padding:clamp(14px,3vw,26px);border-radius:12px;margin:14px 0}
+p{margin:8px 0}
+code,pre{font-family:ui-monospace,monospace}
+pre{padding:12px;background:#eaf0fb;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;border-radius:7px}
+a{color:#154394;text-underline-offset:.2em;overflow-wrap:anywhere}
+a:focus-visible{outline:3px solid #a34a0e;outline-offset:3px}
+</style>
+<main>
+<header>
+<p class="kicker">AI20K · K5 · LEVEL 2 · NGÀY 5</p>
+<h1>Tự soát 5 track trong CVAT</h1>
+<p>Cả lớp làm bài gán tay và nộp theo đề K5. Các công cụ dưới đây giúp tìm frame cần xem lại. Phần thử nghiệm là tự chọn sau khi hoàn tất bài chính.</p>
+</header>
+<section>
+<h2>1. Làm quen · Soát một ID trong CVAT</h2>
+<p>Làm theo <a href="huong-dan-cvat.html#cp3">hướng dẫn CP3 bằng ảnh chụp thật</a>. Dùng Filters → ObjectID ở lượt theo người. Chỗ hai người đi sát cần tua từng frame. Bấm Clear filters trước lượt xem cả cảnh.</p>
+</section>
+<section>
+<h2>2. Tự kiểm · Mở timeline offline</h2>
+<p>Tải hoặc clone repo, giữ <a href="timeline.py">timeline.py</a> và <a href="timeline-template.html">timeline-template.html</a> cùng thư mục. Chạy lệnh dưới đây từ thư mục gốc repo bài làm. Thay tên hai ZIP bằng file xuất của bạn.</p>
+<pre>python tools/lab05/timeline.py --cvat src/exports/HoVaTen_cvat_video.zip --mot src/exports/HoVaTen_mot.zip --output timeline.html</pre>
+<p>Mở <code>timeline.html</code> trong trình duyệt. Mỗi hàng là một track từ XML CVAT. Chọn mốc keyframe, đoạn outside hoặc cảnh báo có số frame để tìm vị trí cần quay lại CVAT. Với B1, thêm <code>--expected 7</code>. Dùng <code>--checker</code> nếu chạy ngoài thư mục gốc repo.</p>
+<p><a href="timeline-demo.html">Xem thử timeline bằng dữ liệu giả lập</a> để tập đọc báo cáo.</p>
+</section>
+<section>
+<h2>3. Thử build tool · Tìm chỗ hai người gán khác nhau</h2>
+<p>Sau khi hai người đã tự gán độc lập, chạy <a href="sandbox.html">sandbox đối chiếu hai file xuất</a> trên bộ tổng hợp. Thử một ca che khuất hoặc hai box đi sát nhau, dự đoán kết quả, rồi sửa một quy tắc hoặc thêm một ca kiểm thử. Trao đổi với bạn/coach tại frame được gợi ý trước khi sửa nhãn.</p>
+<p>Ý tưởng lấy từ <a href="https://docs.cvat.ai/docs/qa-analytics/auto-qa/">Automated QA của CVAT Online/Enterprise</a>: xem bất đồng ở frame đã chọn. Bản thử nghiệm offline dùng hai file xuất ngang hàng, báo gợi ý review và không áp điểm. Môi trường CVAT trả phí chưa được kiểm thử trong lớp này.</p>
+</section>
+</main>

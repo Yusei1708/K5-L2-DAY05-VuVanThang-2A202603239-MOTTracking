@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cẩm Nang Thực Hành Lab Day 05: MOT Tracking Với CVAT</title>
+  
+  <!-- Inter & JetBrains Mono Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- KaTeX for Math -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+
+  <style>
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8fafc;
+      --bg-tertiary: #f1f5f9;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+      --accent-color: #2563eb;
+      --accent-hover: #1d4ed8;
+      --accent-bg: #eff6ff;
+      --code-bg: #f8fafc;
+      --sidebar-width: 300px;
+      --content-max-width: 920px;
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-tertiary: #334155;
+      --text-primary: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --border-color: #334155;
+      --accent-color: #3b82f6;
+      --accent-hover: #60a5fa;
+      --accent-bg: #1e3a5f;
+      --code-bg: #1e293b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      color: var(--text-primary);
+      background-color: var(--bg-primary);
+      transition: background-color 0.2s ease, color 0.2s ease;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Layout */
+    .app-container {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar TOC */
+    .sidebar {
+      width: var(--sidebar-width);
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      padding: 28px 20px;
+      flex-shrink: 0;
+      font-size: 0.88rem;
+    }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .sidebar-title {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .theme-toggle {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .theme-toggle:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border-color: var(--accent-color);
+    }
+
+    .sidebar .toc ul {
+      list-style: none;
+      padding-left: 12px;
+    }
+
+    .sidebar .toc > ul {
+      padding-left: 0;
+    }
+
+    .sidebar .toc li {
+      margin: 6px 0;
+    }
+
+    .sidebar .toc a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      display: block;
+      padding: 5px 8px;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+      line-height: 1.4;
+    }
+
+    .sidebar .toc a:hover {
+      color: var(--accent-color);
+      background: var(--accent-bg);
+      padding-left: 12px;
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      max-width: var(--content-max-width);
+      margin: 0 auto;
+      padding: 48px 48px 120px;
+    }
+
+    /* Typography */
+    h1, h2, h3, h4, h5, h6 {
+      color: var(--text-primary);
+      font-weight: 700;
+      line-height: 1.35;
+      margin-top: 2.2em;
+      margin-bottom: 0.75em;
+      scroll-margin-top: 32px;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      margin-top: 0;
+      padding-bottom: 16px;
+      border-bottom: 2px solid var(--border-color);
+      color: var(--accent-color);
+    }
+
+    h2 {
+      font-size: 1.6rem;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    h3 {
+      font-size: 1.25rem;
+    }
+
+    h4 {
+      font-size: 1.1rem;
+    }
+
+    p {
+      margin-bottom: 1.2em;
+    }
+
+    a {
+      color: var(--accent-color);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    ul, ol {
+      margin-bottom: 1.4em;
+      padding-left: 1.5em;
+    }
+
+    li {
+      margin-bottom: 0.5em;
+    }
+
+    hr {
+      border: 0;
+      height: 1px;
+      background: var(--border-color);
+      margin: 2.5em 0;
+    }
+
+    /* Lead Quote / Header Badges */
+    blockquote:first-of-type {
+      background: var(--bg-secondary);
+      border-left: 4px solid var(--accent-color);
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 28px;
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin: 24px 0;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+      font-size: 0.92rem;
+    }
+
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+      vertical-align: middle;
+    }
+
+    th {
+      background: var(--bg-secondary);
+      font-weight: 600;
+      color: var(--text-primary);
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:nth-child(even) td {
+      background: var(--bg-secondary);
+    }
+
+    /* Keyboard Badge <kbd> */
+    kbd {
+      display: inline-block;
+      padding: 3px 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      font-weight: 600;
+      line-height: 1.3;
+      color: var(--text-primary);
+      background-color: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      box-shadow: 0 1px 0 rgba(0,0,0,0.15), inset 0 0 0 1px #fff;
+    }
+
+    [data-theme="dark"] kbd {
+      box-shadow: 0 1px 0 rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.1);
+    }
+
+    /* Code & Code Blocks */
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.88em;
+      padding: 2px 6px;
+      border-radius: 5px;
+      background: var(--code-bg);
+      color: #e11d48;
+      border: 1px solid var(--border-color);
+    }
+
+    [data-theme="dark"] code {
+      color: #fb7185;
+    }
+
+    pre {
+      position: relative;
+      background: var(--code-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 18px 20px;
+      overflow-x: auto;
+      margin: 20px 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      line-height: 1.55;
+    }
+
+    pre code {
+      background: transparent;
+      padding: 0;
+      border: none;
+      color: var(--text-primary);
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      opacity: 0;
+      transition: all 0.2s;
+    }
+
+    pre:hover .copy-btn {
+      opacity: 1;
+    }
+
+    .copy-btn:hover {
+      background: var(--accent-color);
+      color: #fff;
+      border-color: var(--accent-color);
+    }
+
+    /* Images & Captions */
+    img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      display: block;
+      margin: 24px auto 8px;
+      box-shadow: var(--shadow-md);
+      cursor: zoom-in;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    img:hover {
+      box-shadow: var(--shadow-lg);
+    }
+
+    em {
+      display: block;
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 28px;
+      font-style: italic;
+    }
+
+    /* GitHub Alert Callouts */
+    .callout {
+      margin: 24px 0;
+      padding: 16px 20px;
+      border-radius: 8px;
+      border-left: 4px solid;
+      background: var(--bg-secondary);
+    }
+
+    .callout-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .callout-content p {
+      margin-bottom: 0.75em;
+    }
+
+    .callout-content p:last-child {
+      margin-bottom: 0;
+    }
+
+    .callout-note {
+      border-left-color: #3b82f6;
+      background: #eff6ff;
+    }
+    .callout-note .callout-title { color: #1d4ed8; }
+
+    .callout-tip {
+      border-left-color: #10b981;
+      background: #ecfdf5;
+    }
+    .callout-tip .callout-title { color: #047857; }
+
+    .callout-important {
+      border-left-color: #8b5cf6;
+      background: #f5f3ff;
+    }
+    .callout-important .callout-title { color: #6d28d9; }
+
+    .callout-warning {
+      border-left-color: #f59e0b;
+      background: #fffbeb;
+    }
+    .callout-warning .callout-title { color: #b45309; }
+
+    .callout-caution {
+      border-left-color: #ef4444;
+      background: #fef2f2;
+    }
+    .callout-caution .callout-title { color: #b91c1c; }
+
+    [data-theme="dark"] .callout-note { background: #172554; }
+    [data-theme="dark"] .callout-tip { background: #064e3b; }
+    [data-theme="dark"] .callout-important { background: #2e1065; }
+    [data-theme="dark"] .callout-warning { background: #451a03; }
+    [data-theme="dark"] .callout-caution { background: #450a0a; }
+
+    /* Lightbox Modal */
+    .lightbox-modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0, 0, 0, 0.88);
+      backdrop-filter: blur(4px);
+      align-items: center;
+      justify-content: center;
+      cursor: zoom-out;
+    }
+
+    .lightbox-modal.active {
+      display: flex;
+    }
+
+    .lightbox-modal img {
+      max-width: 94vw;
+      max-height: 92vh;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+    }
+
+    /* Responsive */
+    @media (max-width: 1080px) {
+      .sidebar {
+        display: none;
+      }
+      .main-content {
+        padding: 32px 24px 80px;
+      }
+    }
+
+    @media print {
+      .sidebar, .theme-toggle, .copy-btn {
+        display: none !important;
+      }
+      .main-content {
+        max-width: 100% !important;
+        padding: 0 !important;
+      }
+      body {
+        font-size: 12pt;
+        background: #fff;
+        color: #000;
+      }
+      a {
+        text-decoration: underline;
+        color: #000;
+      }
+      img {
+        max-width: 90% !important;
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar Table of Contents -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title">
+          <span>📚 Mục Lục</span>
+        </div>
+        <button class="theme-toggle" id="themeBtn" title="Chuyển chế độ sáng/tối">
+          <span id="themeIcon">🌙</span>
+        </button>
+      </div>
+      <nav class="toc">
+        <div class="toc">
+<ul>
+<li><a href="#cam-nang-thuc-hanh-lab-day-05-gan-nhan-tracking-a-oi-tuong-mot-voi-cvat">Cẩm Nang Thực Hành Lab Day 05: Gán Nhãn Tracking Đa Đối Tượng (MOT) Với CVAT</a><ul>
+<li><a href="#1-tong-quan-chuan-bi-truoc-khi-lam-bai">1. Tổng Quan &amp; Chuẩn Bị Trước Khi Làm Bài</a><ul>
+<li><a href="#11-muc-tieu-bai-lab">1.1 Mục Tiêu Bài Lab</a></li>
+<li><a href="#12-quy-tac-at-ten-repository-file-nop">1.2 Quy Tắc Đặt Tên Repository &amp; File Nộp</a></li>
+<li><a href="#13-phan-phoi-e-5-oi-tuong-can-theo-vet">1.3 Phân Phối Đề &amp; 5 Đối Tượng Cần Theo Vết</a></li>
+</ul>
+</li>
+<li><a href="#2-buoc-1-khoi-tao-task-cvat-cau-hinh-workspace-cp0-5-45">2. Bước 1: Khởi Tạo Task CVAT &amp; Cấu Hình Workspace (CP0: 5′ – 45′)</a><ul>
+<li><a href="#21-khoi-ong-docker-tao-task-tu-ong">2.1 Khởi Động Docker &amp; Tạo Task Tự Động</a></li>
+<li><a href="#22-cau-hinh-toi-uu-cho-workspace-player-bat-buoc">2.2 Cấu Hình Tối Ưu Cho Workspace &amp; Player (Bắt Buộc)</a></li>
+<li><a href="#23-thao-tac-ve-thu-nghiem-track-demo-track">2.3 Thao Tác Vẽ Thử Nghiệm Track (Demo Track)</a></li>
+</ul>
+</li>
+<li><a href="#3-buoc-2-quy-trinh-gan-nhan-tracking-tuyen-tinh-cp1-45-100">3. Bước 2: Quy Trình Gán Nhãn Tracking Tuyến Tính (CP1: 45′ – 100′)</a><ul>
+<li><a href="#31-chien-thuat-one-person-at-a-time-theo-tung-nguoi-mot">3.1 Chiến Thuật "One Person at a Time" (Theo Từng Người Một)</a></li>
+<li><a href="#32-quy-chuan-bounding-box-amodal">3.2 Quy Chuẩn Bounding Box Amodal</a></li>
+<li><a href="#33-mat-o-keyframe-chuan-8-18-kf-100-frames">3.3 Mật Độ Keyframe Chuẩn (8 – 18 KF / 100 Frames)</a></li>
+</ul>
+</li>
+<li><a href="#4-buoc-3-xu-ly-che-khuat-phong-ngua-loi-id-switch-cp2-115-140">4. Bước 3: Xử Lý Che Khuất &amp; Phòng Ngừa Lỗi ID Switch (CP2: 115′ – 140′)</a><ul>
+<li><a href="#giai-oan-1-truoc-khi-bi-che-khuat-vi-du-frame-20">Giai Đoạn 1: Trước Khi Bị Che Khuất (Ví dụ: Frame 20)</a></li>
+<li><a href="#giai-oan-2-che-khuat-mot-phan-bat-occluded-frame-29-38-tieu-bieu-frame-32">Giai Đoạn 2: Che Khuất Một Phần - Bật Occluded (Frame 29 – 38, Tiêu biểu Frame 32)</a></li>
+<li><a href="#giai-oan-3-che-khuat-hoan-toan-bat-outside-frame-39-45-tieu-bieu-frame-42">Giai Đoạn 3: Che Khuất Hoàn Toàn - Bật Outside (Frame 39 – 45, Tiêu biểu Frame 42)</a></li>
+<li><a href="#giai-oan-4-tai-xuat-hien-tat-outside-giu-nguyen-track-id-frame-46-60-tieu-bieu-frame-60">Giai Đoạn 4: Tái Xuất Hiện - Tắt Outside, GIỮ NGUYÊN TRACK ID (Frame 46 – 60, Tiêu biểu Frame 60)</a></li>
+</ul>
+</li>
+<li><a href="#5-buoc-4-kiem-soat-chat-luong-ra-soat-hai-luot-cp3-140-170">5. Bước 4: Kiểm Soát Chất Lượng &amp; Rà Soát Hai Lượt (CP3: 140′ – 170′)</a></li>
+<li><a href="#6-buoc-5-xuat-du-lieu-chay-kiem-tra-nop-bai-cp4-170-195">6. Bước 5: Xuất Dữ Liệu &amp; Chạy Kiểm Tra Nộp Bài (CP4: 170′ – 195′)</a><ul>
+<li><a href="#61-xuat-file-du-lieu-tu-cvat">6.1 Xuất File Dữ Liệu Từ CVAT</a><ul>
+<li><a href="#1-xuat-file-mot-11">1. Xuất file MOT 1.1:</a></li>
+<li><a href="#2-xuat-file-cvat-for-video-11">2. Xuất file CVAT for video 1.1:</a></li>
+<li><a href="#3-chuyen-trang-thai-job-sang-completed">3. Chuyển Trạng Thái Job Sang Completed:</a></li>
+</ul>
+</li>
+<li><a href="#62-oi-ten-file-luu-vao-thu-muc-nop-bai">6.2 Đổi Tên File &amp; Lưu Vào Thư Mục Nộp Bài</a></li>
+<li><a href="#63-chay-script-tu-ong-kiem-tra-check_submissionpy">6.3 Chạy Script Tự Động Kiểm Tra (check_submission.py)</a></li>
+</ul>
+</li>
+<li><a href="#7-buoc-6-hoan-thien-bao-cao-quy-tac-an-toan-git">7. Bước 6: Hoàn Thiện Báo Cáo &amp; Quy Tắc An Toàn Git</a><ul>
+<li><a href="#71-cau-truc-file-bao-cao-reportindividualmssv_hotenmd">7.1 Cấu Trúc File Báo Cáo report/individual/MSSV_HoTen.md</a></li>
+<li><a href="#72-kiem-tra-an-toan-git-bat-buoc-truoc-khi-git-push">7.2 Kiểm Tra An Toàn Git (Bắt Buộc Trước Khi Git Push)</a></li>
+</ul>
+</li>
+<li><a href="#8-bang-tong-hop-phim-tat-cvat-thuong-dung">8. Bảng Tổng Hợp Phím Tắt CVAT Thường Dùng</a></li>
+</ul>
+</li>
+</ul>
+</div>
+
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <h1 id="cam-nang-thuc-hanh-lab-day-05-gan-nhan-tracking-a-oi-tuong-mot-voi-cvat">Cẩm Nang Thực Hành Lab Day 05: Gán Nhãn Tracking Đa Đối Tượng (MOT) Với CVAT</h1>
+<blockquote>
+<p><strong>Dành cho:</strong> Học viên khóa K5 - Level 2 Computer Vision<br />
+<strong>Bộ dữ liệu thực hành:</strong> <code>MOT17-09</code> (150 frames, chuẩn 1920×1080 @ 30 FPS)<br />
+<strong>Thời lượng thực hành:</strong> 240 phút (Checkpoints CP0 – CP4)<br />
+<strong>Mục tiêu đạt:</strong> 100 điểm Rubric C1–C8, 0 lỗi <code>id_switch</code> không giải thích được.</p>
+</blockquote>
+<hr />
+<h2 id="1-tong-quan-chuan-bi-truoc-khi-lam-bai">1. Tổng Quan &amp; Chuẩn Bị Trước Khi Làm Bài</h2>
+<h3 id="11-muc-tieu-bai-lab">1.1 Mục Tiêu Bài Lab</h3>
+<p>Trong bài thực hành này, bạn sẽ đóng vai trò chuyên viên gán nhãn dữ liệu xe tự hành / giám sát an ninh (Annotation Specialist):
+1. Theo vết liên tục (Multi-Object Tracking) <strong>đúng 5 đối tượng người đi bộ</strong> được phân công theo MSSV xuyên suốt 150 frame của chuỗi <code>MOT17-09</code>.
+2. Sử dụng chế độ <strong>Track</strong> (tuyệt đối không dùng <em>Shape</em>) kết hợp nội suy tuyến tính (Linear Interpolation) để tối ưu công sức gán nhãn (đạt 8–18 keyframe / 100 frame).
+3. Xử lý chính xác các trường hợp <strong>che khuất (occlusion)</strong> bằng thuộc tính <code>occluded</code> (<code>Q</code>) và biến mất tạm thời bằng <code>outside</code> (<code>O</code>), giữ vẹn nguyên ID (không bị <code>id_switch</code>).
+4. Xuất file theo chuẩn <strong>MOT 1.1</strong> và <strong>CVAT for video 1.1</strong>, chạy kiểm tra tự động bằng <code>check_submission.py</code> và hoàn thành báo cáo cá nhân.</p>
+<hr />
+<h3 id="12-quy-tac-at-ten-repository-file-nop">1.2 Quy Tắc Đặt Tên Repository &amp; File Nộp</h3>
+<ul>
+<li><strong>Tên Repository GitHub:</strong> <code>K5-L2-DAY05-HoVaTen-MSSV-MOTTracking</code><br />
+<em>(Ví dụ: <code>K5-L2-DAY05-NguyenVanA-20241231-MOTTracking</code>)</em></li>
+<li><strong>File báo cáo cá nhân:</strong> <code>report/individual/MSSV_HoTen.md</code><br />
+<em>(Ví dụ: <code>report/individual/20241231_NguyenVanA.md</code>)</em></li>
+<li><strong>3 ảnh chụp minh chứng che khuất:</strong></li>
+<li><code>report/individual/che_1_truoc.png</code></li>
+<li><code>report/individual/che_2_giua.png</code></li>
+<li><code>report/individual/che_3_sau.png</code></li>
+<li><strong>File dữ liệu xuất (Export):</strong></li>
+<li><code>src/exports/HoVaTen_mot.zip</code></li>
+<li><code>src/exports/HoVaTen_cvat_video.zip</code></li>
+</ul>
+<hr />
+<h3 id="13-phan-phoi-e-5-oi-tuong-can-theo-vet">1.3 Phân Phối Đề &amp; 5 Đối Tượng Cần Theo Vết</h3>
+<p>Mỗi học viên được phân công 1 trong 3 đề (A, B, C) dựa vào 8 chữ số Mã Số Sinh Viên (MSSV):
+$$\text{hash} = \text{SHA256}(\text{MSSV}) \pmod 3$$</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">Đề</th>
+<th style="text-align: center;">Danh sách ID gốc trong MOT17-09</th>
+<th style="text-align: center;">Đối tượng bài test che khuất CP2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><strong>Đề A</strong></td>
+<td style="text-align: center;"><code>[1, 7, 19, 20, 21]</code></td>
+<td style="text-align: center;">Person 1 (bị Person 2 che)</td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>Đề B</strong></td>
+<td style="text-align: center;"><code>[1, 2, 7, 14, 20]</code></td>
+<td style="text-align: center;">Person 1 (bị Person 2 che)</td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>Đề C</strong></td>
+<td style="text-align: center;"><code>[1, 7, 12, 19, 20]</code></td>
+<td style="text-align: center;">Person 1 (bị Person 2 che)</td>
+</tr>
+</tbody>
+</table>
+<div class="callout callout-important">
+<div class="callout-title"><span class="callout-icon">📌</span> LƯU Ý QUAN TRỌNG</div>
+<div class="callout-content">
+<p>Cả 3 đề đều có <strong>Person 1</strong> đi qua cửa hàng Vodafone và bị <strong>Person 2</strong> che khuất hoàn toàn trong một khoảng thời gian ngắn (khoảng 7 frame). Đây là bài test bắt buộc của Checkpoint CP2!</p>
+</div>
+</div>
+<p>Để xác định đề và tạo ảnh hướng dẫn nhận diện 5 người đi bộ, bạn chạy lệnh:</p>
+<pre><code class="language-powershell">python src/setup_local_lab.py --mssv &lt;MSSV_CỦA_BẠN&gt; --prepare-only
+</code></pre>
+<p>Sau khi chạy, file ảnh nhận diện sẽ được lưu tại <code>.lab-local/de-&lt;A|B|C&gt;-P1-P5.jpg</code>:</p>
+<p><img alt="Ảnh nhận diện 5 đối tượng mẫu Đề A" src="./walkthrough_images/02_de_A_P1_P5.jpg" />
+<em>Hình 1: Ảnh nhận diện 5 người đi bộ Đề A (P1: áo len đen trong shop Vodafone, P2: áo khoác đen quần kaki, P3: áo xanh kẻ, P4: áo xanh lam, P5: bé gái áo trắng).</em></p>
+<hr />
+<h2 id="2-buoc-1-khoi-tao-task-cvat-cau-hinh-workspace-cp0-5-45">2. Bước 1: Khởi Tạo Task CVAT &amp; Cấu Hình Workspace (CP0: 5′ – 45′)</h2>
+<h3 id="21-khoi-ong-docker-tao-task-tu-ong">2.1 Khởi Động Docker &amp; Tạo Task Tự Động</h3>
+<ol>
+<li>Đảm bảo ứng dụng <strong>Docker Desktop</strong> trên máy tính đã bật và biểu tượng Docker hiển thị màu xanh (Running).</li>
+<li>Chạy lệnh tự động tạo task trên CVAT local:</li>
+</ol>
+<pre><code class="language-powershell">python src/setup_local_lab.py --mssv &lt;MSSV_CỦA_BẠN&gt;
+</code></pre>
+<ol start="3">
+<li>Mở trình duyệt web truy cập: <a href="http://localhost:8080">http://localhost:8080</a> và đăng nhập bằng tài khoản CVAT của bạn.</li>
+<li>Bạn sẽ thấy Task mới có tên dạng <code>DAY05-MOT17-09-&lt;ĐỀ&gt;-&lt;MSSV&gt;</code> đã được tạo sẵn kèm 1 Job gồm 150 frames:</li>
+</ol>
+<p><img alt="Trang tổng quan Task trên CVAT" src="./walkthrough_images/01_task_page.png" />
+<em>Hình 2: Task DAY05-MOT17-09-A-20241231 đã sẵn sàng với nhãn <code>person</code> và Job #10 (150 frames).</em></p>
+<hr />
+<h3 id="22-cau-hinh-toi-uu-cho-workspace-player-bat-buoc">2.2 Cấu Hình Tối Ưu Cho Workspace &amp; Player (Bắt Buộc)</h3>
+<p>Nhấp chuột vào dòng <strong>Job #...</strong> để mở không gian gán nhãn. Trước khi vẽ, bạn cần cấu hình các thông số sau:</p>
+<ol>
+<li><strong>Player Settings:</strong>
+   - Nhấp vào biểu tượng bánh răng ⚙️ (Settings) ở góc trên bên phải -&gt; Chọn tab <strong>Player</strong>.
+   - Mục <strong>Player step</strong>: Đổi thành <code>10</code> (mặc định là 10). Giá trị này cho phép bạn dùng phím tắt <code>V</code> (nhảy tiến 10 frame) và <code>C</code> (nhảy lùi 10 frame) để gán nhãn cực nhanh.</li>
+</ol>
+<p><img alt="Cấu hình Player Step = 10" src="./walkthrough_images/03_cp0_settings_player.png" />
+<em>Hình 3: Thiết lập Player step = 10 để nhảy nhanh qua các khoảng cách nội suy.</em></p>
+<ol start="2">
+<li><strong>Workspace Settings:</strong>
+   - Chọn tab <strong>Workspace</strong>.
+   - Bật <strong>Enable auto save</strong> (đặt chu kỳ <code>15 minutes</code>) để tránh rủi ro mất dữ liệu khi trình duyệt gặp sự cố.
+   - Bật <strong>Always show object details</strong> để luôn hiển thị tên nhãn, Track ID và kích thước bounding box trên màn hình.</li>
+</ol>
+<p><img alt="Cấu hình Workspace Settings" src="./walkthrough_images/04_cp0_settings_workspace.png" />
+<em>Hình 4: Kích hoạt Auto save và Always show object details.</em></p>
+<ol start="3">
+<li><strong>Bật Đường Gióng (Projections):</strong>
+   - Ở cột công cụ bên phải, cuộn xuống bảng <strong>Appearance</strong>.
+   - Đánh dấu chọn ô <strong>Show projections</strong>. Hai đường gióng vuông góc màu xanh sẽ xuất hiện theo con trỏ chuột, giúp bạn căn chỉnh đáy bounding box khớp chính xác với bàn chân người đi bộ.</li>
+</ol>
+<hr />
+<h3 id="23-thao-tac-ve-thu-nghiem-track-demo-track">2.3 Thao Tác Vẽ Thử Nghiệm Track (Demo Track)</h3>
+<div class="callout callout-caution">
+<div class="callout-title"><span class="callout-icon">🛑</span> NGUY HIỂM / QUY TẮC BẮT BUỘC</div>
+<div class="callout-content">
+<p><strong>Quy tắc sinh tử:</strong> Trong suốt bài Lab, khi vẽ bounding box bạn <strong>BẮT BUỘC</strong> chọn chế độ <strong>Track</strong> (tuyệt đối không chọn <em>Shape</em>). Chế độ Shape sẽ biến mỗi frame thành một đối tượng độc lập, làm mất tính liên tục của chuỗi tracking và bạn sẽ nhận điểm 0 ở tiêu chí IDF1!</p>
+</div>
+</div>
+<ol>
+<li>Nhấn phím <code>N</code> (hoặc nhấp công cụ <em>Draw new rectangle</em> ở thanh công cụ bên trái).</li>
+<li>Chọn nhãn <code>person</code>, chọn nút <strong>Track</strong>.</li>
+<li>Kéo thả 2 điểm để vẽ 1 hộp bao trọn thân người đi bộ tại frame 0.</li>
+<li>Nhấn phím <code>V</code> để nhảy đến frame 10. Kéo dời hộp bao theo vị trí người đó ở frame 10.</li>
+<li>CVAT sẽ tự động nối các frame từ 1 đến 9 bằng đường nội suy tuyến tính (Linear Interpolation).</li>
+</ol>
+<p><img alt="Minh họa tạo Track và nội suy" src="./walkthrough_images/05_cp0_demo_track.png" />
+<em>Hình 5: Vẽ thử Track mẫu - thanh Objects bên phải hiển thị <code>RECTANGLE TRACK person</code>.</em></p>
+<ol start="6">
+<li>Sau khi hiểu rõ thao tác, chọn track thử nghiệm này và nhấn <code>Delete</code> (hoặc chọn thùng rác) để xóa đi, trả lại không gian sạch sẽ chuẩn bị cho bài làm chính thức.</li>
+</ol>
+<hr />
+<h2 id="3-buoc-2-quy-trinh-gan-nhan-tracking-tuyen-tinh-cp1-45-100">3. Bước 2: Quy Trình Gán Nhãn Tracking Tuyến Tính (CP1: 45′ – 100′)</h2>
+<h3 id="31-chien-thuat-one-person-at-a-time-theo-tung-nguoi-mot">3.1 Chiến Thuật "One Person at a Time" (Theo Từng Người Một)</h3>
+<ul>
+<li><strong>ĐỪNG BAO GIỜ</strong> gán nhãn cả 5 người trên cùng 1 frame rồi mới nhảy sang frame tiếp theo. Bạn sẽ rất dễ nhầm lẫn vị trí và bỏ quên keyframe.</li>
+<li><strong>HÃY LÀM THEO CÁCH:</strong> Chọn Person 1 -&gt; Theo vết xuyên suốt từ frame đầu tiên đến frame 149 -&gt; Lưu lại (<code>Ctrl + S</code>) -&gt; Chuyển sang Person 2.</li>
+</ul>
+<h3 id="32-quy-chuan-bounding-box-amodal">3.2 Quy Chuẩn Bounding Box Amodal</h3>
+<ul>
+<li><strong>Amodal Bounding Box:</strong> Bọc trọn vẹn toàn bộ cơ thể người (từ đỉnh đầu, ba lô, cánh tay đến gót chân).</li>
+<li>Kể cả khi người đi bộ bị bàn ghế, biển quảng cáo hoặc người khác che khuất một nửa thân dưới, bạn vẫn phải ước lượng kéo đáy hộp chạm đất nơi chân người đó đang đứng.</li>
+</ul>
+<p><img alt="5 đối tượng tại Frame 0" src="./walkthrough_images/06_cp1_frame_000.png" />
+<em>Hình 6: Frame 0 (000001.jpg) sau khi xác định đúng 5 đối tượng theo phân công Đề A.</em></p>
+<h3 id="33-mat-o-keyframe-chuan-8-18-kf-100-frames">3.3 Mật Độ Keyframe Chuẩn (8 – 18 KF / 100 Frames)</h3>
+<ul>
+<li>Không phải frame nào cũng cắm keyframe! Trung bình mỗi đối tượng đi thẳng đều chỉ cần cắm 1 keyframe sau mỗi 10–15 frame (dùng phím <code>V</code>).</li>
+<li>Chỉ cắm thêm keyframe dày hơn (2–5 frame) khi người đi bộ quay đầu, đổi hướng đột ngột hoặc bước đi nhanh chậm bất thường.</li>
+</ul>
+<hr />
+<h2 id="4-buoc-3-xu-ly-che-khuat-phong-ngua-loi-id-switch-cp2-115-140">4. Bước 3: Xử Lý Che Khuất &amp; Phòng Ngừa Lỗi ID Switch (CP2: 115′ – 140′)</h2>
+<p>Tình huống kinh điển của bài Lab là <strong>Person 1</strong> (người đàn ông áo len đen bên trong shop Vodafone) bị <strong>Person 2</strong> (chàng trai áo khoác đen quần kaki) đi ngang qua che khuất. Bạn cần thực hiện chuẩn xác 4 trạng thái sau:</p>
+<h3 id="giai-oan-1-truoc-khi-bi-che-khuat-vi-du-frame-20">Giai Đoạn 1: Trước Khi Bị Che Khuất (Ví dụ: Frame 20)</h3>
+<ul>
+<li>Person 1 đang bước đi tự do, chưa bị chướng ngại vật chắn.</li>
+<li>Trạng thái: Bounding box bình thường, thuộc tính <code>occluded = False</code>, <code>outside = False</code>.</li>
+<li>Chụp ảnh màn hình lưu thành: <code>report/individual/che_1_truoc.png</code>.</li>
+</ul>
+<p><img alt="Trước khi che khuất - Frame 20" src="./walkthrough_images/07_cp2_che_1_truoc_f20.png" />
+<em>Hình 7: Frame 20 - Person 1 (Track 1) đi bên trong cửa hàng, Person 2 bắt đầu tiến tới từ phía bên trái.</em></p>
+<hr />
+<h3 id="giai-oan-2-che-khuat-mot-phan-bat-occluded-frame-29-38-tieu-bieu-frame-32">Giai Đoạn 2: Che Khuất Một Phần - Bật Occluded (Frame 29 – 38, Tiêu biểu Frame 32)</h3>
+<ul>
+<li>Person 2 bắt đầu chắn trước mặt Person 1. Bạn vẫn nhìn thấy một phần đầu hoặc thân của Person 1.</li>
+<li><strong>Thao tác:</strong> Nhấn phím <code>Q</code> (hoặc nhấp chuột vào biểu tượng con mắt/ổ khóa thuộc tính <code>occluded</code> trên thẻ đối tượng).</li>
+<li><strong>Hiện tượng:</strong> Viền bounding box của Person 1 chuyển sang dạng nét đứt.</li>
+<li><strong>Lưu ý:</strong> Bạn vẫn phải kéo hộp bao toàn thân (Amodal box) ước tính vị trí Person 1 phía sau.</li>
+<li>Chụp ảnh màn hình lưu thành: <code>report/individual/che_2_giua.png</code>.</li>
+</ul>
+<p><img alt="Che khuất một phần với cờ Occluded - Frame 32" src="./walkthrough_images/08_cp2_che_2_amodal_f32.png" />
+<em>Hình 8: Frame 32 - Person 1 bị Person 2 che khuất một phần; cờ <code>occluded</code> (Q) được bật, viền hộp đứt nét thể hiện amodal box.</em></p>
+<hr />
+<h3 id="giai-oan-3-che-khuat-hoan-toan-bat-outside-frame-39-45-tieu-bieu-frame-42">Giai Đoạn 3: Che Khuất Hoàn Toàn - Bật Outside (Frame 39 – 45, Tiêu biểu Frame 42)</h3>
+<ul>
+<li>Person 1 bị lưng của Person 2 che lấp 100%, không còn nhìn thấy bất kỳ điểm ảnh nào của Person 1 trong khoảng 7 frame (tương đương 0.23 giây).</li>
+<li><strong>Thao tác:</strong> Nhấn phím <code>O</code> (thuộc tính <code>outside</code>).</li>
+<li><strong>Hiện tượng:</strong> Bounding box của Person 1 tạm thời biến mất khỏi canvas. Khi xuất file MOT 1.1, hệ thống sẽ tự động không ghi dòng dữ liệu cho đối tượng này ở các frame bị outside.</li>
+</ul>
+<p><img alt="Che khuất hoàn toàn với cờ Outside - Frame 42" src="./walkthrough_images/09_cp2_che_2_outside_f42.png" />
+<em>Hình 9: Frame 42 - Person 1 bị che hoàn toàn (outside = True), hộp bao ẩn đi nhường chỗ cho Person 2 di chuyển.</em></p>
+<hr />
+<h3 id="giai-oan-4-tai-xuat-hien-tat-outside-giu-nguyen-track-id-frame-46-60-tieu-bieu-frame-60">Giai Đoạn 4: Tái Xuất Hiện - Tắt Outside, GIỮ NGUYÊN TRACK ID (Frame 46 – 60, Tiêu biểu Frame 60)</h3>
+<div class="callout callout-warning">
+<div class="callout-title"><span class="callout-icon">⚠️</span> CẢNH BÁO</div>
+<div class="callout-content">
+<p><strong>CẢNH BÁO LỖI ID SWITCH (TRỪ ĐIỂM NẶNG):</strong><br />
+Khi Person 1 bước lộ diện trở lại, <strong>tuyệt đối KHÔNG ĐƯỢC nhấn phím <code>N</code> để vẽ một track mới!</strong><br />
+Thay vào đó, bạn vẫn chọn chính <strong>Track 1 cũ</strong>, tại frame người đó xuất hiện lại (ví dụ frame 46), tắt thuộc tính <code>outside</code> (bằng cách nhấn phím <code>O</code> hoặc di chuyển lại hộp). Person 1 sẽ tiếp tục hành trình với đúng mã số định danh ban đầu.</p>
+</div>
+</div>
+<ul>
+<li>Chụp ảnh màn hình lưu thành: <code>report/individual/che_3_sau.png</code>.</li>
+</ul>
+<p><img alt="Tái xuất hiện giữ nguyên Track ID - Frame 60" src="./walkthrough_images/10_cp2_che_3_sau_f60.png" />
+<em>Hình 10: Frame 60 - Person 1 tái xuất hiện phía sau cánh cửa kính và vẫn giữ nguyên định danh Track ID 1.</em></p>
+<hr />
+<h2 id="5-buoc-4-kiem-soat-chat-luong-ra-soat-hai-luot-cp3-140-170">5. Bước 4: Kiểm Soát Chất Lượng &amp; Rà Soát Hai Lượt (CP3: 140′ – 170′)</h2>
+<p>Sau khi đã hoàn thành cả 5 đối tượng, bạn cần thực hiện quy trình <strong>2-Pass Review</strong> để quét sạch các lỗi trôi hộp:</p>
+<ol>
+<li>
+<p><strong>Lượt 1: Tua ngược (Reverse Review)</strong>
+   - Đưa con trỏ về frame 149.
+   - Nhấn <code>Shift + Space</code> (hoặc dùng phím <code>D</code>/<code>F</code>) để phát video chạy lùi từ cuối về đầu.
+   - Mắt người nhận diện lỗi trôi hộp (drift) khi xem video chạy ngược nhạy hơn gấp 3 lần so với xem xuôi. Nếu phát hiện chỗ nào hộp bị lệch $\text{IoU} &lt; 0.7$, hãy dừng lại chèn thêm 1 keyframe để nắn chỉnh.</p>
+</li>
+<li>
+<p><strong>Lượt 2: Xem toàn cảnh (Scene Review)</strong>
+   - Phát video với tốc độ 1.0x từ frame 0 đến 149.
+   - Đảm bảo các đối tượng đi ra khỏi màn hình (như Person 4 hay Person 5) được đóng track đúng lúc bằng thuộc tính <code>outside</code>.</p>
+</li>
+</ol>
+<p><img alt="Kiểm tra giữa chuỗi - Frame 100" src="./walkthrough_images/11_cp3_frame_100.png" />
+<em>Hình 11: Frame 100 - Rà soát độ khít của các hộp bao ở giữa đoạn video.</em></p>
+<p><img alt="Rà soát frame cuối cùng - Frame 149" src="./walkthrough_images/12_cp3_frame_149.png" />
+<em>Hình 12: Frame 149 - Rà soát frame kết thúc, các track kết thúc mượt mà không bị sót frame thừa.</em></p>
+<hr />
+<h2 id="6-buoc-5-xuat-du-lieu-chay-kiem-tra-nop-bai-cp4-170-195">6. Bước 5: Xuất Dữ Liệu &amp; Chạy Kiểm Tra Nộp Bài (CP4: 170′ – 195′)</h2>
+<h3 id="61-xuat-file-du-lieu-tu-cvat">6.1 Xuất File Dữ Liệu Từ CVAT</h3>
+<p>Bạn cần xuất 2 định dạng file khác nhau:</p>
+<h4 id="1-xuat-file-mot-11">1. Xuất file MOT 1.1:</h4>
+<ul>
+<li>Nhấp nút <strong>Menu</strong> ở góc trên bên trái màn hình gán nhãn -&gt; Chọn <strong>Export job dataset</strong>.</li>
+<li>Chọn định dạng: <strong><code>MOT 1.1</code></strong>.</li>
+<li><strong>BẮT BUỘC:</strong> Đảm bảo công tắc <strong><code>Save images</code></strong> đang ở trạng thái <strong>TẮT (UNCHECKED)</strong>. Nộp kèm ảnh sẽ khiến dung lượng repo vượt quá giới hạn và bị trừ điểm vi phạm bản quyền dữ liệu MOT17!</li>
+<li>Nhấn <strong>OK</strong> để tải file zip về máy.</li>
+</ul>
+<p><img alt="Hộp thoại xuất dữ liệu MOT 1.1" src="./walkthrough_images/13_cp4_export_mot.png" />
+<em>Hình 13: Xuất định dạng MOT 1.1 với tùy chọn Save images đã tắt.</em></p>
+<h4 id="2-xuat-file-cvat-for-video-11">2. Xuất file CVAT for video 1.1:</h4>
+<ul>
+<li>Nhấp nút <strong>Menu</strong> -&gt; Chọn <strong>Export job dataset</strong>.</li>
+<li>Chọn định dạng: <strong><code>CVAT for video 1.1</code></strong>.</li>
+<li>Đảm bảo <strong><code>Save images</code></strong> đang <strong>TẮT</strong>.</li>
+<li>Nhấn <strong>OK</strong> để tải về file zip thứ hai.</li>
+</ul>
+<p><img alt="Hộp thoại xuất dữ liệu CVAT for video 1.1" src="./walkthrough_images/14_cp4_export_cvat_video.png" />
+<em>Hình 14: Xuất định dạng CVAT for video 1.1 (chứa annotations.xml lưu thông tin keyframes và occluded).</em></p>
+<h4 id="3-chuyen-trang-thai-job-sang-completed">3. Chuyển Trạng Thái Job Sang Completed:</h4>
+<ul>
+<li>Trong menu Job, chọn <strong>Finish the job</strong> để hệ thống lưu toàn bộ thay đổi và chuyển trạng thái công việc sang <code>completed</code>.</li>
+</ul>
+<p><img alt="Job đã hoàn thành ở trạng thái Completed" src="./walkthrough_images/15_cp4_job_completed.png" />
+<em>Hình 15: Job #10 đã được chuyển sang trạng thái completed.</em></p>
+<hr />
+<h3 id="62-oi-ten-file-luu-vao-thu-muc-nop-bai">6.2 Đổi Tên File &amp; Lưu Vào Thư Mục Nộp Bài</h3>
+<p>Chuyển 2 file vừa tải về vào thư mục <code>src/exports/</code> của repository và đổi tên theo định dạng <code>HoVaTen_mot.zip</code> và <code>HoVaTen_cvat_video.zip</code>:</p>
+<pre><code class="language-powershell"># Ví dụ đối với học viên Nguyễn Văn A:
+src/exports/NguyenVanA_mot.zip
+src/exports/NguyenVanA_cvat_video.zip
+</code></pre>
+<hr />
+<h3 id="63-chay-script-tu-ong-kiem-tra-check_submissionpy">6.3 Chạy Script Tự Động Kiểm Tra (check_submission.py)</h3>
+<p>Chạy script thẩm định chất lượng bài làm trước khi viết báo cáo:</p>
+<pre><code class="language-powershell">python src/check_submission.py --mot src/exports/NguyenVanA_mot.zip --cvat src/exports/NguyenVanA_cvat_video.zip --expected 5
+</code></pre>
+<p>Khi chạy thành công, màn hình sẽ hiển thị kết quả kiểm định chi tiết:</p>
+<pre><code class="language-text">Số frame in theo CVAT (bắt đầu từ 0). Trong gt.txt, frame_id = frame CVAT + 1.
+
+=== File MOT 1.1: NguyenVanA_mot.zip ===
+  Số track ID: 5   |   Tổng số box: 593
+  [OK]        Đúng 5 track ID.
+
+  Track | Frame có mặt | Số frame | Đoạn vắng (outside)
+      1 |   0–149      |      143 | 39–45
+      2 |   0–149      |      150 | -
+      3 |   0–149      |      150 | -
+      4 |   0–146      |      126 | 114–134
+      5 |  41–64       |       24 | -
+
+=== File CVAT for video 1.1: NguyenVanA_cvat_video.zip ===
+
+  Track | Nhãn   | Frame thấy | Keyframe | KF/100 frame | Frame occluded | Lần bật outside
+      0 | person |        143 |       12 |          8.4 |             18 |               1
+      1 | person |         24 |        4 |         16.7 |             24 |               1
+      2 | person |        150 |        9 |          6.0 |              0 |               0
+      3 | person |        150 |        9 |          6.0 |             40 |               0
+      4 | person |        126 |        8 |          6.3 |             10 |               2
+
+  Tổng: 42 keyframe / 593 frame có mặt = 7.1 keyframe / 100 frame
+  [OK]        Đọc được 5 track từ annotations.xml.
+
+=== Tóm tắt ===
+  Lỗi: 0   |   Cảnh báo: 0
+  Đạt. Dán phần tóm tắt này vào báo cáo mục 5.
+</code></pre>
+<div class="callout callout-tip">
+<div class="callout-title"><span class="callout-icon">💡</span> MẸO THỰC HÀNH</div>
+<div class="callout-content">
+<p>Hãy sao chép toàn bộ khối văn bản kết quả tóm tắt trên để dán vào <strong>Mục 5: Kết quả check_submission.py</strong> trong file báo cáo cá nhân!</p>
+</div>
+</div>
+<hr />
+<h2 id="7-buoc-6-hoan-thien-bao-cao-quy-tac-an-toan-git">7. Bước 6: Hoàn Thiện Báo Cáo &amp; Quy Tắc An Toàn Git</h2>
+<h3 id="71-cau-truc-file-bao-cao-reportindividualmssv_hotenmd">7.1 Cấu Trúc File Báo Cáo <code>report/individual/MSSV_HoTen.md</code></h3>
+<p>Mở file mẫu tại <code>report/individual/MSSV_HoTen.md</code> và đổi tên thành mã số và họ tên của bạn (ví dụ: <code>20241231_NguyenVanA.md</code>). Hoàn thành 7 mục chính:
+1. <strong>Thông tin chung:</strong> Họ tên, MSSV, Đề (A/B/C), Danh sách 5 đối tượng.
+2. <strong>Bảng phân tích Keyframe:</strong> Thống kê số lượng keyframe đã đặt cho từng đối tượng và giải thích lý do cắm thêm keyframe ở các khúc ngoặt.
+3. <strong>Bảng xử lý che khuất (CP2):</strong> Mô tả chi tiết frame bắt đầu bị che, frame bị che hoàn toàn (outside), frame tái xuất hiện và nhúng 3 ảnh minh chứng:
+   - <code>![Trước che khuất](che_1_truoc.png)</code>
+   - <code>![Trong khi che khuất](che_2_giua.png)</code>
+   - <code>![Sau khi che khuất](che_3_sau.png)</code>
+4. <strong>Phân tích lỗi &amp; Thách thức:</strong> Chia sẻ các khó khăn khi gán nhãn (ví dụ: phản chiếu qua cửa kính, người đi quá sát nhau).
+5. <strong>Kết quả kiểm tra:</strong> Dán log của <code>check_submission.py</code>.
+6. <strong>Đánh giá đạo đức (AI Ethics):</strong> Phân tích vấn đề quyền riêng tư khi thu thập hình ảnh nơi công cộng và thiên kiến dữ liệu (bias) trong bài toán tracking người.</p>
+<hr />
+<h3 id="72-kiem-tra-an-toan-git-bat-buoc-truoc-khi-git-push">7.2 Kiểm Tra An Toàn Git (Bắt Buộc Trước Khi Git Push)</h3>
+<div class="callout callout-caution">
+<div class="callout-title"><span class="callout-icon">🛑</span> NGUY HIỂM / QUY TẮC BẮT BUỘC</div>
+<div class="callout-content">
+<p><strong>QUY TẮC CẤM:</strong> Nghiêm cấm commit các file ảnh gốc của bộ MOT17 (<code>img1/</code>), file video (<code>*.mp4</code>), file dữ liệu xuất <code>.zip</code>, mật khẩu hoặc file môi trường <code>.env</code> vào Git repo. Nếu vi phạm, bài nộp sẽ bị phạt trừ điểm rất nặng theo quy chế thi.</p>
+</div>
+</div>
+<p>Trước khi thực hiện <code>git push</code>, bạn <strong>BẮT BUỘC</strong> mở terminal và chạy lệnh kiểm tra:</p>
+<ul>
+<li>Trên Linux / macOS / Git Bash:</li>
+</ul>
+<pre><code class="language-bash">git ls-files | grep -E '\.(jpg|jpeg|png|mp4|zip)$'
+</code></pre>
+<ul>
+<li>Trên Windows PowerShell:</li>
+</ul>
+<pre><code class="language-powershell">git ls-files | Select-String -Pattern '\.(jpg|jpeg|png|mp4|zip)$'
+</code></pre>
+<p><strong>KẾT QUẢ ĐẠT CHUẨN:</strong>
+Đầu ra của lệnh trên <strong>CHỈ ĐƯỢC CHỨA ĐÚNG 3 FILE</strong> sau:</p>
+<pre><code class="language-text">report/individual/che_1_truoc.png
+report/individual/che_2_giua.png
+report/individual/che_3_sau.png
+</code></pre>
+<p>Nếu phát hiện thấy file <code>.zip</code>, thư mục <code>img1/</code>, hoặc ảnh không liên quan xuất hiện trong danh sách:
+- Chạy lệnh hủy theo dõi ngay lập tức:</p>
+<pre><code class="language-bash">git rm --cached &lt;tên_file_bị_lọt&gt;
+</code></pre>
+<ul>
+<li>Kiểm tra lại file <code>.gitignore</code> để đảm bảo đã loại trừ các định dạng này.</li>
+</ul>
+<hr />
+<h2 id="8-bang-tong-hop-phim-tat-cvat-thuong-dung">8. Bảng Tổng Hợp Phím Tắt CVAT Thường Dùng</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">Phím tắt</th>
+<th style="text-align: left;">Chức năng</th>
+<th style="text-align: left;">Áp dụng trong bài Lab</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><kbd>N</kbd></td>
+<td style="text-align: left;">Bắt đầu vẽ đối tượng mới</td>
+<td style="text-align: left;">Nhấn <code>N</code>, chọn <code>person</code> và chế độ <strong>Track</strong></td>
+</tr>
+<tr>
+<td style="text-align: center;"><kbd>Space</kbd></td>
+<td style="text-align: left;">Play / Pause video</td>
+<td style="text-align: left;">Phát hoặc tạm dừng để quan sát chuyển động</td>
+</tr>
+<tr>
+<td style="text-align: center;"><kbd>F</kbd></td>
+<td style="text-align: left;">Tiến 1 frame</td>
+<td style="text-align: left;">Di chuyển tỉ mỉ từng khung hình</td>
+</tr>
+<tr>
+<td style="text-align: center;"><kbd>D</kbd></td>
+<td style="text-align: left;">Lùi 1 frame</td>
+<td style="text-align: left;">Lùi lại 1 khung hình</td>
+</tr>
+<tr>
+<td style="text-align: center;"><kbd>V</kbd></td>
+<td style="text-align: left;">Tiến 1 bước (Player Step = 10)</td>
+<td style="text-align: left;">Nhảy nhanh 10 frame để gán keyframe tiếp theo</td>
+</tr>
+<tr>
+<td style="text-align: center;"><kbd>C</kbd></td>
+<td style="text-align: left;">Lùi 1 bước (Player Step = 10)</td>
+<td style="text-align: left;">Lùi nhanh 10 frame</td>
+</tr>
+<tr>
+<td style="text-align: center;"><kbd>Q</kbd></td>
+<td style="text-align: left;">Bật/tắt thuộc tính <code>occluded</code></td>
+<td style="text-align: left;">Đánh dấu người bị che khuất một phần (viền đứt)</td>
+</tr>
+<tr>
+<td style="text-align: center;"><kbd>O</kbd></td>
+<td style="text-align: left;">Bật/tắt thuộc tính <code>outside</code></td>
+<td style="text-align: left;">Đánh dấu người biến mất hoàn toàn khỏi tầm nhìn</td>
+</tr>
+<tr>
+<td style="text-align: center;"><kbd>K</kbd></td>
+<td style="text-align: left;">Đặt / Hủy Keyframe thủ công</td>
+<td style="text-align: left;">Cố định hình dạng hộp tại frame hiện tại</td>
+</tr>
+<tr>
+<td style="text-align: center;"><kbd>Ctrl + S</kbd></td>
+<td style="text-align: left;">Lưu tiến độ (Save)</td>
+<td style="text-align: left;">Lưu dữ liệu gán nhãn lên máy chủ</td>
+</tr>
+<tr>
+<td style="text-align: center;"><kbd>Delete</kbd></td>
+<td style="text-align: left;">Xóa đối tượng đang chọn</td>
+<td style="text-align: left;">Xóa track lỗi hoặc track vẽ thử</td>
+</tr>
+</tbody>
+</table>
+<p>Chúc bạn thực hiện bài Lab Day 05 đạt kết quả xuất sắc!</p>
+    </main>
+  </div>
+
+  <!-- Lightbox Modal for Fullscreen Image Viewing -->
+  <div class="lightbox-modal" id="lightbox">
+    <img id="lightboxImg" src="" alt="Fullscreen Preview">
+  </div>
+
+  <script>
+    // Dark mode toggle with localStorage persistence
+    const themeBtn = document.getElementById('themeBtn');
+    const themeIcon = document.getElementById('themeIcon');
+    const currentTheme = localStorage.getItem('theme') || 
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    
+    if (currentTheme === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      themeIcon.textContent = '☀️';
+    }
+
+    themeBtn.addEventListener('click', () => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      if (isDark) {
+        document.documentElement.removeAttribute('data-theme');
+        themeIcon.textContent = '🌙';
+        localStorage.setItem('theme', 'light');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeIcon.textContent = '☀️';
+        localStorage.setItem('theme', 'dark');
+      }
+    });
+
+    // Add Copy buttons to code blocks
+    document.querySelectorAll('pre').forEach(pre => {
+      const btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.textContent = 'Sao chép';
+      btn.addEventListener('click', () => {
+        const code = pre.querySelector('code') ? pre.querySelector('code').innerText : pre.innerText;
+        navigator.clipboard.writeText(code).then(() => {
+          btn.textContent = 'Đã chép!';
+          setTimeout(() => btn.textContent = 'Sao chép', 2000);
+        });
+      });
+      pre.appendChild(btn);
+    });
+
+    // Lightbox image preview
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImg = document.getElementById('lightboxImg');
+    document.querySelectorAll('.main-content img').forEach(img => {
+      img.addEventListener('click', () => {
+        lightboxImg.src = img.src;
+        lightbox.classList.add('active');
+      });
+    });
+    lightbox.addEventListener('click', () => {
+      lightbox.classList.remove('active');
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') lightbox.classList.remove('active');
+    });
+  </script>
+</body>
+</html>

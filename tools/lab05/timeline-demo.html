@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<title>Timeline kiểm tra · Lab 05</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --background: oklch(0.18 0.016 236);
+    --panel: oklch(0.22 0.017 236);
+    --track: oklch(0.26 0.016 236);
+    --line: oklch(0.41 0.021 236);
+    --text: oklch(0.97 0.008 215);
+    --muted: oklch(0.79 0.019 228);
+    --active: oklch(0.88 0.116 178);
+    --visible: oklch(0.62 0.091 181);
+    --outside: oklch(0.52 0.021 233);
+    --occluded: oklch(0.74 0.109 83);
+    --error: oklch(0.81 0.117 27);
+    --space-1: .25rem;
+    --space-2: .5rem;
+    --space-3: .75rem;
+    --space-4: 1rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --radius: .5rem;
+    --tap-size: 2.75rem;
+    --track-label: 7rem;
+    --text-small: .875rem;
+    --body-font: "Source Sans 3", system-ui, sans-serif;
+    --display-font: "Barlow Condensed", "Arial Narrow", var(--body-font);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--background); color: var(--text); font: 1rem/1.5 var(--body-font); }
+  main { max-width: 72rem; margin: auto; padding: var(--space-8) var(--space-6); }
+  h1, h2, p { margin: 0; }
+  h1 { font: 720 clamp(2.75rem, 7vw, 4.5rem)/1.02 var(--display-font); letter-spacing: -.035em; text-wrap: balance; }
+  h2 { font-size: 1.35rem; line-height: 1.2; }
+  header p { margin-top: var(--space-3); color: var(--muted); }
+  section, details { margin-top: var(--space-8); }
+  button, input { font: inherit; color: inherit; }
+  button, input[type=number], summary { min-height: var(--tap-size); }
+  button, input[type=number] { background: var(--track); border: 1px solid var(--line); border-radius: var(--radius); }
+  button { cursor: pointer; padding: var(--space-2) var(--space-3); }
+  button:hover, summary:hover { text-decoration: underline; }
+  button:active { background: var(--line); }
+  :focus-visible { outline: 2px solid var(--active); outline-offset: 2px; }
+  input[type=number] { width: 5rem; padding-inline: var(--space-2); }
+  input[type=range] { width: 100%; min-width: 0; height: var(--tap-size); margin: 0; accent-color: var(--active); }
+  .source { overflow-wrap: anywhere; font-size: var(--text-small); }
+  .section-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-3); }
+  .section-heading span { color: var(--muted); font-size: var(--text-small); }
+  .panel { padding: var(--space-4); background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
+  .control { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: var(--space-2); align-items: center; margin-bottom: var(--space-4); }
+  .chart { display: grid; gap: var(--space-2); font-variant-numeric: tabular-nums; }
+  .chart-row { min-width: 0; display: grid; grid-template-columns: var(--track-label) minmax(0, 1fr); gap: var(--space-2); align-items: center; }
+  .track-name { font-size: var(--text-small); min-width: 0; overflow-wrap: anywhere; }
+  .track-name strong, .track-name small { display: block; }
+  .track-name small { color: var(--muted); font-size: inherit; }
+  .axis { position: relative; min-height: var(--space-6); color: var(--muted); font-size: var(--text-small); }
+  .axis span { position: absolute; transform: translateX(-50%); }
+  .axis span:first-child { transform: none; }
+  .axis span:last-child { transform: translateX(-100%); }
+  .lane { position: relative; min-height: var(--tap-size); background: var(--track); cursor: pointer; }
+  .segment { position: absolute; top: 32%; height: 36%; }
+  .visible { background: var(--visible); }
+  .outside { background: var(--outside); border: 2px dashed var(--panel); }
+  .occluded { background: var(--occluded); }
+  .keyframe { position: absolute; z-index: 1; width: var(--space-2); height: var(--space-2); top: 50%; transform: translate(-50%, -50%) rotate(45deg); background: var(--text); border: 1px solid var(--panel); }
+  .cursor { position: absolute; z-index: 2; width: 2px; height: 100%; left: var(--cursor, .33%); transform: translateX(-50%); background: var(--active); pointer-events: none; }
+  .legend { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); margin-top: var(--space-4); color: var(--muted); font-size: var(--text-small); }
+  .legend span { display: inline-flex; align-items: center; gap: var(--space-2); }
+  .swatch { width: var(--space-4); height: var(--space-3); display: inline-block; }
+  .swatch.keyframe { position: static; width: var(--space-2); height: var(--space-2); margin-inline: var(--space-1); transform: rotate(45deg); }
+  .note { color: var(--muted); margin-top: var(--space-3); font-size: var(--text-small); }
+  .issue-list { padding: 0; margin: 0; list-style: none; }
+  .issue-list li { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: var(--space-2) var(--space-4); padding: var(--space-4) 0; border-top: 1px solid var(--line); }
+  .issue-source { display: flex; flex-direction: column; font-size: var(--text-small); color: var(--muted); }
+  .issue-source strong { color: var(--occluded); }
+  .issue-source strong.error { color: var(--error); }
+  .issue-content { overflow-wrap: anywhere; }
+  .frame-links { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
+  .frame-links button { color: var(--active); font-variant-numeric: tabular-nums; }
+  summary { cursor: pointer; display: list-item; padding-block: var(--space-3); }
+  pre { margin-bottom: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--text-small); }
+  @media (max-width: 39rem) {
+    :root { --track-label: 4.25rem; }
+    main { padding: var(--space-6) var(--space-4); }
+    .panel { padding: var(--space-3); }
+    .issue-list li { grid-template-columns: minmax(0, 1fr); }
+    .issue-source { flex-direction: row; gap: var(--space-2); }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Timeline kiểm tra Lab 05</h1>
+    <p>Chọn frame trên timeline rồi mở cùng số frame trong CVAT để kiểm tra.</p>
+    <p class="source" id="sources"></p>
+  </header>
+
+  <section id="timeline" aria-labelledby="timeline-title">
+    <div class="section-heading">
+      <h2 id="timeline-title">Track trong CVAT XML</h2>
+      <span id="track-count"></span>
+    </div>
+    <div class="panel">
+      <div class="control">
+        <label for="frame-number">Frame</label>
+        <input id="frame-number" type="number" min="0" max="149" step="1" value="0">
+        <input id="frame-slider" type="range" min="0" max="149" step="1" value="0" aria-label="Chọn frame CVAT">
+      </div>
+      <div class="chart" id="chart"></div>
+      <div class="legend">
+        <span><i class="swatch visible" aria-hidden="true"></i>Có box</span>
+        <span><i class="swatch outside" aria-hidden="true"></i>Outside</span>
+        <span><i class="swatch occluded" aria-hidden="true"></i>Occluded</span>
+        <span><i class="swatch keyframe" aria-hidden="true"></i>Keyframe</span>
+      </div>
+      <p class="note" id="frame-status" role="status"></p>
+      <p class="note" id="track-note"></p>
+    </div>
+  </section>
+
+  <section aria-labelledby="issues-title">
+    <div class="section-heading">
+      <h2 id="issues-title">Kết quả tự kiểm</h2>
+      <span id="issue-count"></span>
+    </div>
+    <p class="note">ID track trong MOT và CVAT XML có thể khác nhau. Nút frame đưa bạn đến mốc thời gian chung.</p>
+    <p class="note" id="checker-note"></p>
+    <ul class="issue-list" id="issues"></ul>
+  </section>
+
+  <details>
+    <summary>Toàn bộ kết quả checker</summary>
+    <pre id="report"></pre>
+  </details>
+  <noscript><p class="note">Hãy bật JavaScript để xem các track và chọn frame. Trang chạy ngoại tuyến.</p></noscript>
+</main>
+<script id="timeline-data" type="application/json">{"frameCount": 150, "cvat": "timeline-fixture-cvat.zip", "mot": "timeline-fixture-mot.zip", "tracks": [{"id": "42", "label": "person", "segments": [[0, "visible"], [5, "occluded"], [20, "outside"], [85, "visible"]], "keyframes": [0, 5, 20, 85]}, {"id": "9", "label": "\u003c/script>\u003cscript>window.ran=true\u003c/script>", "segments": [[10, "visible"]], "keyframes": [10]}], "trackNotice": null, "issues": [{"source": "MOT", "severity": "LỖI", "message": "Có 3 track ID, cần 1. Thừa track = fragmentation (một người hai ID) hoặc false_track (vẽ người ngoài danh sách). Nếu cố ý tạo track mới, ghi lý do vào báo cáo mục 3.", "frames": []}, {"source": "MOT", "severity": "CẢNH BÁO", "message": "Track 90: vắng 71 frame (frame 8–78) > 60. Quy ước lớp: khuất quá 2 giây thì tạo track mới, hoặc ghi lý do.", "frames": [[8, 78]]}, {"source": "MOT", "severity": "CẢNH BÁO", "message": "Track 90 frame 80: box nằm hẳn ngoài ảnh. Nên bật outside thay vì để box ngoài khung.", "frames": [[80, 80]]}, {"source": "MOT", "severity": "CẢNH BÁO", "message": "Track 90: box nhảy xa trong 1 frame ở frame [1, 80, 81]. Kiểm tra id_switch hoặc keyframe đặt nhầm người.", "frames": [[1, 1], [80, 80], [81, 81]]}, {"source": "MOT", "severity": "CẢNH BÁO", "message": "Track 90: chiều cao box đổi > 30% trong 1 frame ở frame [2, 81]. Kiểm tra box co giật (co box theo phần nhìn thấy?).", "frames": [[2, 2], [81, 81]]}, {"source": "MOT", "severity": "CẢNH BÁO", "message": "Track 91: box nhảy xa trong 1 frame ở frame [1]. Kiểm tra id_switch hoặc keyframe đặt nhầm người.", "frames": [[1, 1]]}, {"source": "MOT", "severity": "CẢNH BÁO", "message": "Track 91: chiều cao box đổi > 30% trong 1 frame ở frame [2]. Kiểm tra box co giật (co box theo phần nhìn thấy?).", "frames": [[2, 2]]}, {"source": "MOT", "severity": "CẢNH BÁO", "message": "Track 92 chỉ có 1 frame: có thể là shape rời hoặc track thừa.", "frames": []}, {"source": "MOT", "severity": "CẢNH BÁO", "message": "Track 90 và 91 chồng nhau (IoU > 0.7) ở 8 frame, ví dụ frame [0, 1, 2]. Có thể hai track cùng một người, hoặc box merge hai người.", "frames": [[0, 0], [1, 1], [2, 2]]}, {"source": "CVAT XML", "severity": "CẢNH BÁO", "message": "Track 42: 75 keyframe / 100 frame > 50. Quá dày, dồn keyframe vào chỗ rẽ / dừng / bị che.", "frames": []}, {"source": "CVAT XML", "severity": "CẢNH BÁO", "message": "Track 9 có nhãn '\u003c/script>\u003cscript>window.ran=true\u003c/script>', lab này chỉ dùng 'person'.", "frames": []}, {"source": "CVAT XML", "severity": "CẢNH BÁO", "message": "Track 9 chỉ thấy 1 frame: có thể là shape rời (vẽ bằng Shape) hoặc track thừa.", "frames": []}, {"source": "CVAT XML", "severity": "CẢNH BÁO", "message": "Track 9: 100 keyframe / 100 frame > 50. Quá dày, dồn keyframe vào chỗ rẽ / dừng / bị che.", "frames": []}], "checkerNotice": null, "report": "Số frame in theo CVAT (bắt đầu từ 0). Trong gt.txt, frame_id = frame CVAT + 1.\n\n=== File MOT 1.1: timeline-fixture-mot.zip ===\n  Số track ID: 3   |   Tổng số box: 20\n  [LỖI]       Có 3 track ID, cần 1. Thừa track = fragmentation (một người hai ID) hoặc false_track (vẽ người ngoài danh sách). Nếu cố ý tạo track mới, ghi lý do vào báo cáo mục 3.\n\n  Track | Frame có mặt | Số frame | Đoạn vắng (outside)\n     90 |   0–81       |       11 | 8–78\n     91 |   0–7        |        8 | -\n     92 |  79–79       |        1 | -\n\n  [CẢNH BÁO]  Track 90: vắng 71 frame (frame 8–78) > 60. Quy ước lớp: khuất quá 2 giây thì tạo track mới, hoặc ghi lý do.\n  [CẢNH BÁO]  Track 90 frame 80: box nằm hẳn ngoài ảnh. Nên bật outside thay vì để box ngoài khung.\n  [CẢNH BÁO]  Track 90: box nhảy xa trong 1 frame ở frame [1, 80, 81]. Kiểm tra id_switch hoặc keyframe đặt nhầm người.\n  [CẢNH BÁO]  Track 90: chiều cao box đổi > 30% trong 1 frame ở frame [2, 81]. Kiểm tra box co giật (co box theo phần nhìn thấy?).\n  [CẢNH BÁO]  Track 91: box nhảy xa trong 1 frame ở frame [1]. Kiểm tra id_switch hoặc keyframe đặt nhầm người.\n  [CẢNH BÁO]  Track 91: chiều cao box đổi > 30% trong 1 frame ở frame [2]. Kiểm tra box co giật (co box theo phần nhìn thấy?).\n  [CẢNH BÁO]  Track 92 chỉ có 1 frame: có thể là shape rời hoặc track thừa.\n  [CẢNH BÁO]  Track 90 và 91 chồng nhau (IoU > 0.7) ở 8 frame, ví dụ frame [0, 1, 2]. Có thể hai track cùng một người, hoặc box merge hai người.\n\n=== File CVAT for video 1.1: timeline-fixture-cvat.zip ===\n\n  Track | Nhãn   | Frame thấy | Keyframe | KF/100 frame | Frame occluded | Lần bật outside\n     42 | person |          4 |        3 |         75.0 |              1 |               1\n              Track 42: keyframe ở frame [0, 5, 85]\n  [CẢNH BÁO]  Track 42: 75 keyframe / 100 frame > 50. Quá dày, dồn keyframe vào chỗ rẽ / dừng / bị che.\n      9 | \u003c/script>\u003cscript>window.ran=true\u003c/script> |          1 |        1 |        100.0 |              0 |               0\n              Track 9: keyframe ở frame [10]\n  [CẢNH BÁO]  Track 9 có nhãn '\u003c/script>\u003cscript>window.ran=true\u003c/script>', lab này chỉ dùng 'person'.\n  [CẢNH BÁO]  Track 9 chỉ thấy 1 frame: có thể là shape rời (vẽ bằng Shape) hoặc track thừa.\n  [CẢNH BÁO]  Track 9: 100 keyframe / 100 frame > 50. Quá dày, dồn keyframe vào chỗ rẽ / dừng / bị che.\n\n  Tổng: 4 keyframe / 5 frame có mặt = 80.0 keyframe / 100 frame\n  [OK]        Đọc được 2 track từ annotations.xml.\n\n=== Tóm tắt ===\n  Lỗi: 1   |   Cảnh báo: 12\n  Còn [LỖI]: sửa trên CVAT, xuất lại rồi chạy lại script."}</script>
+<script>
+  "use strict";
+  const data = JSON.parse(document.getElementById("timeline-data").textContent);
+  const chart = document.getElementById("chart");
+  const number = document.getElementById("frame-number");
+  const slider = document.getElementById("frame-slider");
+  const frameStatus = document.getElementById("frame-status");
+  const lastFrame = data.frameCount - 1;
+  const stateLabels = {visible: "Có box", outside: "Outside", occluded: "Occluded"};
+  const percent = (frame) => (100 * frame / data.frameCount) + "%";
+
+  function element(tag, className = "", text = "") {
+    const node = document.createElement(tag);
+    node.className = className;
+    node.textContent = text;
+    return node;
+  }
+
+  function selectFrame(frame) {
+    const current = Math.max(0, Math.min(lastFrame, Math.round(frame)));
+    number.value = current;
+    slider.value = current;
+    chart.style.setProperty("--cursor", percent(current + 0.5));
+
+    const descriptions = data.tracks.map((track) => {
+      const state = track.segments.filter(([start]) => start <= current).at(-1)?.[1];
+      const marker = track.keyframes.includes(current) ? ", keyframe" : "";
+      return `#${track.id} ${stateLabels[state] ?? "chưa có track"}${marker}`;
+    });
+    const description = descriptions.length ? " · " + descriptions.join(" · ") : "";
+    frameStatus.textContent = `Frame CVAT ${current}${description}`;
+  }
+
+  slider.addEventListener("input", () => selectFrame(slider.valueAsNumber));
+  number.addEventListener("change", () => {
+    selectFrame(Number.isFinite(number.valueAsNumber) ? number.valueAsNumber : slider.valueAsNumber);
+  });
+  number.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") number.dispatchEvent(new Event("change"));
+  });
+
+  function drawTracks() {
+    const axisRow = element("div", "chart-row");
+    const axis = element("div", "axis");
+    axisRow.setAttribute("aria-hidden", "true");
+    axisRow.append(element("div", "track-name", "Frame"), axis);
+    for (const frame of [0, 30, 60, 90, 120, lastFrame]) {
+      const tick = element("span", "", frame);
+      tick.style.left = frame === lastFrame ? "100%" : percent(frame);
+      axis.append(tick);
+    }
+    chart.append(axisRow);
+
+    for (const track of data.tracks) {
+      const row = element("div", "chart-row");
+      const label = element("div", "track-name");
+      label.append(element("strong", "", `#${track.id}`), element("small", "", track.label));
+      const lane = element("div", "lane");
+      lane.setAttribute("aria-hidden", "true");
+      track.segments.forEach(([start, state], index) => {
+        const end = track.segments[index + 1]?.[0] ?? data.frameCount;
+        const band = element("span", `segment ${state}`);
+        band.style.left = percent(start);
+        band.style.width = percent(end - start);
+        band.title = `${stateLabels[state]} · frame ${start}–${end - 1}`;
+        lane.append(band);
+      });
+      for (const frame of track.keyframes) {
+        const mark = element("span", "keyframe");
+        mark.style.left = percent(frame + 0.5);
+        mark.title = `Keyframe ${frame}`;
+        lane.append(mark);
+      }
+      lane.append(element("span", "cursor"));
+      lane.addEventListener("click", (event) => {
+        const bounds = lane.getBoundingClientRect();
+        const frame = Math.floor((event.clientX - bounds.left) * data.frameCount / bounds.width);
+        selectFrame(frame);
+      });
+      row.append(label, lane);
+      chart.append(row);
+    }
+  }
+
+  function drawIssues() {
+    const issueList = document.getElementById("issues");
+    const errors = data.issues.filter((issue) => issue.severity === "LỖI").length;
+    document.getElementById("issue-count").textContent = `${errors} lỗi · ${data.issues.length - errors} cảnh báo`;
+    if (data.checkerNotice) {
+      document.getElementById("checker-note").textContent = data.checkerNotice;
+    } else if (data.issues.length === 0) {
+      document.getElementById("checker-note").textContent = "Checker không báo lỗi hoặc cảnh báo. Vẫn cần review hai lượt trên CVAT (CP3).";
+    }
+    for (const issue of data.issues) {
+      const entry = element("li");
+      const source = element("div", "issue-source");
+      source.append(
+        element("strong", issue.severity === "LỖI" ? "error" : "", issue.severity),
+        element("span", "", issue.source)
+      );
+      const content = element("div", "issue-content");
+      content.append(element("p", "", issue.message));
+      if (issue.frames.length) {
+        const links = element("div", "frame-links");
+        for (const [start, end] of issue.frames) {
+          const button = element("button", "", start === end ? `Frame ${start}` : `Frame ${start}–${end}`);
+          button.type = "button";
+          button.addEventListener("click", () => {
+            selectFrame(start);
+            number.focus({preventScroll: true});
+            document.getElementById("timeline").scrollIntoView({block: "start"});
+          });
+          links.append(button);
+        }
+        content.append(links);
+      } else {
+        content.append(element("p", "note", "Checker không nêu frame trong khoảng 0–149 cho mục này."));
+      }
+      entry.append(source, content);
+      issueList.append(entry);
+    }
+  }
+
+  const motSource = data.mot ? " · MOT " + data.mot : " · Chưa cung cấp file MOT";
+  document.getElementById("sources").textContent = "CVAT " + data.cvat + motSource;
+  document.getElementById("track-count").textContent = `${data.tracks.length} track có box · frame 0–${lastFrame}`;
+  document.getElementById("report").textContent = data.report;
+  document.getElementById("track-note").textContent = [
+    data.tracks.length ? "Trạng thái giữ từ box hiện tại đến box tiếp theo trong XML. Khoảng trống trước box đầu tiên là lúc track chưa bắt đầu." : "Không có track hình chữ nhật để hiển thị.",
+    data.trackNotice,
+  ].filter(Boolean).join(" ");
+  drawTracks();
+  drawIssues();
+  selectFrame(0);
+</script>
+</body>
+</html>

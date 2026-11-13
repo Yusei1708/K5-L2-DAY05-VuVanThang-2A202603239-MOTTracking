@@ -1,0 +1,18 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.DS_Store
+
+# Dữ liệu MOT17 không được commit
+img1/
+*.mp4
+*.avi
+seqinfo.ini
+MOT17*/
+
+# CVAT local lab preparation
+.lab-local/
+.venv/

@@ -1,0 +1,3 @@
+cvat-sdk==2.82.0
+fsspec[http]>=2025.3,<2027
+Pillow>=11,<14
